@@ -6,7 +6,7 @@ export interface Character {
   scale: number
   chatHistory: Message[]
   isSpeaking: boolean
-  expression: 'idle' | 'happy' | 'sad' | 'surprised' | 'thinking'
+  expression: Expression
 }
 
 export interface Message {
@@ -15,6 +15,8 @@ export interface Message {
   content: string
   timestamp: number
 }
+
+export type Expression = 'idle' | 'happy' | 'sad' | 'surprised' | 'thinking'
 
 export interface CharacterPreset {
   id: string

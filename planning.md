@@ -30,7 +30,7 @@ Webcam mirror with spawnable AI anime characters. Characters appear in your phys
 - [x] Download free VRM sample models → `public/models/AliciaSolid.vrm`
 - [x] Integrate `@pixiv/three-vrm` loader with GLTFLoader plugin
 - [x] VRM idle animation (breathing bob + auto blink via expressionManager)
-- [ ] Emotion expression triggers
+- [x] Emotion expression triggers
 - [x] Character placement logic (beside user in frame)
 
 ---

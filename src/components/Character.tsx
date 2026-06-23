@@ -7,6 +7,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { VRM, VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm'
 import * as THREE from 'three'
 import { useStore } from '@/stores/useStore'
+import type { Expression } from '@/lib/types'
 
 interface CharacterProps {
   charId: string
@@ -18,6 +19,8 @@ export function Character({ charId, modelUrl, position }: CharacterProps) {
   const groupRef = useRef<THREE.Group>(null)
   const vrmRef = useRef<VRM | null>(null)
   const blinkTimer = useRef(0)
+  const expressionTimer = useRef(0)
+  const prevExpression = useRef<Expression>('idle')
 
   const character = useStore((s) => s.characters.find((c) => c.id === charId))
   const activeCharacterId = useStore((s) => s.activeCharacterId)
@@ -85,6 +88,37 @@ export function Character({ charId, modelUrl, position }: CharacterProps) {
       em.setValue('blink', 0)
     }
 
+    const expression = character?.expression ?? 'idle'
+
+    if (expression !== prevExpression.current) {
+      prevExpression.current = expression
+      expressionTimer.current = 0
+    }
+    expressionTimer.current += delta
+
+    const active = expressionTimer.current >= 4 ? 'idle' : expression
+
+    const blendShapes: Record<string, string> = {
+      happy: 'happy',
+      sad: 'sad',
+      surprised: 'surprised',
+      thinking: 'relaxed',
+    }
+
+    const targetName = blendShapes[active]
+    const speed = 3 * delta
+
+    for (const name of ['happy', 'angry', 'sad', 'relaxed', 'surprised']) {
+      const current = em.getValue(name) ?? 0
+      const target = name === targetName ? 0.8 : 0
+      const next = current + (target - current) * Math.min(speed, 1)
+      if (Math.abs(next - current) > 0.005) {
+        em.setValue(name, next)
+      } else {
+        em.setValue(name, target)
+      }
+    }
+
     em.update()
   })
 
@@ -113,10 +147,10 @@ export function Character({ charId, modelUrl, position }: CharacterProps) {
       )}
 
       {showBubble && (
-        <Html position={[0, 1.6, 0]} center distanceFactor={8}>
+        <Html position={[0, -0.4, 0]} center distanceFactor={6}>
           <div
-            className={`px-3 py-1.5 rounded-2xl text-sm shadow-lg backdrop-blur-sm max-w-[200px] text-center pointer-events-none
-              ${lastMessage ? 'bg-white/90 text-gray-800' : 'bg-amber-100/90 text-amber-800'}`}
+            className={`px-2.5 py-1 rounded-xl text-xs shadow-lg backdrop-blur-sm max-w-[160px] text-center pointer-events-none leading-snug
+              ${lastMessage ? 'bg-white/70 text-gray-800' : 'bg-amber-100/70 text-amber-800'}`}
           >
             {lastMessage ? lastMessage.content : '...'}
           </div>

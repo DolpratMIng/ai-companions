@@ -3,6 +3,10 @@ import { chatCompletion } from '@/lib/ai'
 
 export async function POST(req: NextRequest) {
   try {
+    if (!process.env.LLM_API_KEY) {
+      return Response.json({ error: 'LLM_API_KEY not set in .env.local' }, { status: 500 })
+    }
+
     const { messages } = await req.json()
 
     if (!messages || !Array.isArray(messages)) {
@@ -15,7 +19,8 @@ export async function POST(req: NextRequest) {
       headers: { 'Content-Type': 'text/event-stream' },
     })
   } catch (err) {
-    console.error('Chat API error:', err)
-    return Response.json({ error: 'Internal server error' }, { status: 500 })
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    console.error('Chat API error:', message)
+    return Response.json({ error: message }, { status: 500 })
   }
 }

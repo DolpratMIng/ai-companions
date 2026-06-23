@@ -1,5 +1,14 @@
 import { create } from 'zustand'
-import type { Character, Message } from '@/lib/types'
+import type { Character, Message, Expression } from '@/lib/types'
+
+function detectExpression(text: string): Expression {
+  const lower = text.toLowerCase()
+  if (/\b(lol|laugh|haha|heh|smile|joy|happy|great|love|wonderful|amazing|glad|funny|cute|adorable)\b/.test(lower)) return 'happy'
+  if (/\b(sorry|sad|cry|unfortunate|regret|miss|pain|hurt|lonely|depress|apologize|afraid)\b/.test(lower)) return 'sad'
+  if (/\b(wow|really\?|oh!|incredible|surprise|unexpected|no way|seriously|whoa|huh|what\?)\b/.test(lower)) return 'surprised'
+  if (/\b(hmm|think|perhaps|maybe|consider|ponder|wonder|curious|suppose)\b/.test(lower)) return 'thinking'
+  return 'idle'
+}
 
 interface AppState {
   characters: Character[]
@@ -106,7 +115,10 @@ export const useStore = create<AppState>((set, get) => ({
         body: JSON.stringify({ messages }),
       })
 
-      if (!res.ok) throw new Error(`API error: ${res.status}`)
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error ?? `API error: ${res.status}`)
+      }
 
       const reader = res.body!.getReader()
       const decoder = new TextDecoder()
@@ -138,6 +150,9 @@ export const useStore = create<AppState>((set, get) => ({
           timestamp: Date.now(),
         }
 
+        const expression = detectExpression(fullContent)
+        get().setExpression(activeCharacterId, expression)
+
         set((state) => ({
           characters: state.characters.map((c) =>
             c.id === activeCharacterId
@@ -148,8 +163,23 @@ export const useStore = create<AppState>((set, get) => ({
         }))
       }
     } catch (err) {
-      console.error('Chat error:', err)
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      console.error('Chat error:', message)
       set({ isThinking: false })
+
+      const errorMsg: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: `⚠ ${message}`,
+        timestamp: Date.now(),
+      }
+      set((state) => ({
+        characters: state.characters.map((c) =>
+          c.id === activeCharacterId
+            ? { ...c, chatHistory: [...c.chatHistory, errorMsg] }
+            : c,
+        ),
+      }))
     }
   },
 }))

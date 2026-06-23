@@ -8,12 +8,20 @@ export interface ChatOptions {
 }
 
 export async function chatCompletion({ messages, signal }: ChatOptions) {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${LLM_API_KEY}`,
+  }
+
+  // OpenRouter needs these for rate limiting
+  if (LLM_BASE_URL.includes('openrouter')) {
+    headers['HTTP-Referer'] = 'https://localhost:3000'
+    headers['X-Title'] = 'AI Companion'
+  }
+
   const res = await fetch(`${LLM_BASE_URL}/chat/completions`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${LLM_API_KEY}`,
-    },
+    headers,
     body: JSON.stringify({
       model: LLM_MODEL,
       messages,
@@ -23,7 +31,8 @@ export async function chatCompletion({ messages, signal }: ChatOptions) {
   })
 
   if (!res.ok) {
-    throw new Error(`LLM API error: ${res.status} ${res.statusText}`)
+    const body = await res.text().catch(() => '')
+    throw new Error(`LLM API error: ${res.status} — ${body.slice(0, 200)}`)
   }
 
   return res
