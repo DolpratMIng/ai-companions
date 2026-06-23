@@ -1,93 +1,84 @@
 'use client'
 
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { VRM, VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm'
 import * as THREE from 'three'
 
-const BODY_COLORS = ['#6b4c8a', '#e06b6b', '#4a8c6f', '#4a7c9e', '#c97d3a']
-
 interface CharacterProps {
+  modelUrl: string
   position: [number, number, number]
-  colorIndex?: number
 }
 
-export function Character({ position, colorIndex = 0 }: CharacterProps) {
+export function Character({ modelUrl, position }: CharacterProps) {
   const groupRef = useRef<THREE.Group>(null)
-  const bodyColor = BODY_COLORS[colorIndex % BODY_COLORS.length]
+  const vrmRef = useRef<VRM | null>(null)
+  const blinkTimer = useRef(0)
 
-  useFrame((state) => {
-    if (!groupRef.current) return
-    groupRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 0.8) * 0.06
-    groupRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.3) * 0.1
+  useEffect(() => {
+    const loader = new GLTFLoader()
+    loader.register((parser) => new VRMLoaderPlugin(parser))
+
+    let disposed = false
+
+    loader.load(
+      modelUrl,
+      (gltf) => {
+        if (disposed) return
+        const vrm = gltf.userData.vrm as VRM
+        vrmRef.current = vrm
+        VRMUtils.rotateVRM0(vrm)
+        if (groupRef.current) {
+          groupRef.current.add(vrm.scene)
+        }
+      },
+      undefined,
+      (err) => {
+        console.error('VRM load error:', err)
+      },
+    )
+
+    return () => {
+      disposed = true
+      if (vrmRef.current && groupRef.current) {
+        groupRef.current.remove(vrmRef.current.scene)
+      }
+    }
+  }, [modelUrl])
+
+  useFrame((state, delta) => {
+    const vrm = vrmRef.current
+    if (!vrm) return
+
+    vrm.update(delta)
+
+    if (groupRef.current) {
+      const breathe = Math.sin(state.clock.elapsedTime * 1.2) * 0.008
+      groupRef.current.position.y = position[1] + breathe
+    }
+
+    const em = vrm.expressionManager
+    if (!em) return
+
+    blinkTimer.current += delta
+    const interval = 3.0
+    const duration = 0.1
+
+    if (blinkTimer.current >= interval) {
+      blinkTimer.current = 0
+    }
+
+    if (blinkTimer.current < duration) {
+      const t = blinkTimer.current / duration
+      const v = t < 0.5 ? t / 0.5 : (1 - t) / 0.5
+      em.setValue('blink', v)
+    } else if ((em.getValue('blink') ?? 0) > 0) {
+      em.setValue('blink', 0)
+    }
+
+    em.update()
   })
 
-  return (
-    <group ref={groupRef} position={position}>
-      {/* Body */}
-      <mesh position={[0, 0.45, 0]}>
-        <capsuleGeometry args={[0.14, 0.35, 8, 16]} />
-        <meshStandardMaterial color={bodyColor} roughness={0.6} />
-      </mesh>
-
-      {/* Head */}
-      <mesh position={[0, 0.85, 0]}>
-        <sphereGeometry args={[0.18, 16, 16]} />
-        <meshStandardMaterial color="#f0c8a0" roughness={0.4} />
-      </mesh>
-
-      {/* Hair (simple dome) */}
-      <mesh position={[0, 0.92, 0]}>
-        <sphereGeometry args={[0.185, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color={bodyColor} roughness={0.8} />
-      </mesh>
-
-      {/* Left eye */}
-      <mesh position={[-0.06, 0.87, 0.17]}>
-        <sphereGeometry args={[0.03, 8, 8]} />
-        <meshStandardMaterial color="#222" />
-      </mesh>
-
-      {/* Right eye */}
-      <mesh position={[0.06, 0.87, 0.17]}>
-        <sphereGeometry args={[0.03, 8, 8]} />
-        <meshStandardMaterial color="#222" />
-      </mesh>
-
-      {/* Eye shine left */}
-      <mesh position={[-0.05, 0.88, 0.175]}>
-        <sphereGeometry args={[0.01, 6, 6]} />
-        <meshStandardMaterial color="#fff" />
-      </mesh>
-
-      {/* Eye shine right */}
-      <mesh position={[0.07, 0.88, 0.175]}>
-        <sphereGeometry args={[0.01, 6, 6]} />
-        <meshStandardMaterial color="#fff" />
-      </mesh>
-
-      {/* Mouth (tiny sphere) */}
-      <mesh position={[0, 0.82, 0.175]}>
-        <sphereGeometry args={[0.015, 6, 6]} />
-        <meshStandardMaterial color="#c07870" />
-      </mesh>
-
-      {/* Left arm */}
-      <mesh position={[-0.22, 0.6, 0]}>
-        <cylinderGeometry args={[0.03, 0.04, 0.25, 6]} />
-        <meshStandardMaterial color="#f0c8a0" roughness={0.6} />
-      </mesh>
-
-      {/* Right arm */}
-      <mesh position={[0.22, 0.6, 0]}>
-        <cylinderGeometry args={[0.03, 0.04, 0.25, 6]} />
-        <meshStandardMaterial color="#f0c8a0" roughness={0.6} />
-      </mesh>
-
-      {/* Shadow / ground disc */}
-      <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.2, 16]} />
-        <meshStandardMaterial color="#000" transparent opacity={0.15} roughness={1} />
-      </mesh>
-    </group>
-  )
+  return <group ref={groupRef} position={position} />
 }

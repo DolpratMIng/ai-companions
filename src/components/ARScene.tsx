@@ -10,7 +10,7 @@ export function ARScene() {
   return (
     <div className="absolute inset-0 pointer-events-none z-10">
       <Canvas
-        camera={{ position: [0, 1.2, 2.8], fov: 50 }}
+        camera={{ position: [0, 1.3, 2.8], fov: 50 }}
         style={{ background: 'transparent' }}
         gl={{ alpha: true, antialias: true }}
       >
@@ -22,8 +22,12 @@ export function ARScene() {
         {characters.map((char, i) => (
           <Character
             key={char.id}
-            position={[i * 1.2 - (characters.length - 1) * 0.6, 0, -1.2]}
-            colorIndex={i}
+            modelUrl={char.modelUrl}
+            position={[
+              i * 0.9 - (characters.length - 1) * 0.45,
+              0,
+              -1.2,
+            ]}
           />
         ))}
       </Canvas>

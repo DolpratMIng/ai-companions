@@ -22,6 +22,7 @@ export const useStore = create<AppState>((set) => ({
           name: preset.name,
           modelUrl: preset.modelUrl,
           position: [0, 0, 0],
+          scale: 1,
           chatHistory: [],
           isSpeaking: false,
           expression: 'idle',

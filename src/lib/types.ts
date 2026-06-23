@@ -3,6 +3,7 @@ export interface Character {
   name: string
   modelUrl: string
   position: [number, number, number]
+  scale: number
   chatHistory: Message[]
   isSpeaking: boolean
   expression: 'idle' | 'happy' | 'sad' | 'surprised' | 'thinking'
