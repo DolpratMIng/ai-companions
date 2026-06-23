@@ -39,12 +39,15 @@ Webcam mirror with spawnable AI anime characters. Characters appear in your phys
 
 **Goal**: Text-based conversation with character via LLM.
 
-- [ ] `POST /api/chat` route — proxies to OpenAI/Anthropic
-- [ ] `lib/ai.ts` — LLM client wrapper with character persona system prompt
-- [ ] Chat input UI
-- [ ] Speech bubble rendering (attached to character)
-- [ ] Streaming response (character "thinks" while generating)
-- [ ] Per-character chat history in Zustand
+- [x] `POST /api/chat` route — proxies to OpenAI/Anthropic (streaming SSE)
+- [x] `lib/ai.ts` — LLM client wrapper with env-configured provider
+- [x] Character persona system prompt (`stores/useStore.ts`)
+- [x] Chat input UI (`components/ChatInput.tsx`)
+- [x] Speech bubble via `@react-three/drei/Html` above character
+- [x] Streaming response (SSE parse in `sendMessage`)
+- [x] "Thinking" indicator while generating
+- [x] Click character to select → ring highlight + chat input appears
+- [x] Per-character chat history in Zustand
 
 ---
 

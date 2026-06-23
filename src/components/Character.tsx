@@ -2,19 +2,27 @@
 
 import { useEffect, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { Html } from '@react-three/drei'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { VRM, VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm'
 import * as THREE from 'three'
+import { useStore } from '@/stores/useStore'
 
 interface CharacterProps {
+  charId: string
   modelUrl: string
   position: [number, number, number]
 }
 
-export function Character({ modelUrl, position }: CharacterProps) {
+export function Character({ charId, modelUrl, position }: CharacterProps) {
   const groupRef = useRef<THREE.Group>(null)
   const vrmRef = useRef<VRM | null>(null)
   const blinkTimer = useRef(0)
+
+  const character = useStore((s) => s.characters.find((c) => c.id === charId))
+  const activeCharacterId = useStore((s) => s.activeCharacterId)
+  const isThinking = useStore((s) => s.isThinking)
+  const setActiveCharacter = useStore((s) => s.setActiveCharacter)
 
   useEffect(() => {
     const loader = new GLTFLoader()
@@ -80,5 +88,40 @@ export function Character({ modelUrl, position }: CharacterProps) {
     em.update()
   })
 
-  return <group ref={groupRef} position={position} />
+  const lastMessage = character?.chatHistory?.filter((m) => m.role === 'assistant').at(-1)
+  const showBubble = lastMessage || (activeCharacterId === charId && isThinking)
+
+  return (
+    <group
+      ref={groupRef}
+      position={position}
+      onClick={(e) => {
+        e.stopPropagation()
+        setActiveCharacter(charId)
+      }}
+    >
+      {activeCharacterId === charId && (
+        <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.3, 0.35, 32]} />
+          <meshStandardMaterial
+            color="#60a5fa"
+            transparent
+            opacity={0.6}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
+
+      {showBubble && (
+        <Html position={[0, 1.6, 0]} center distanceFactor={8}>
+          <div
+            className={`px-3 py-1.5 rounded-2xl text-sm shadow-lg backdrop-blur-sm max-w-[200px] text-center pointer-events-none
+              ${lastMessage ? 'bg-white/90 text-gray-800' : 'bg-amber-100/90 text-amber-800'}`}
+          >
+            {lastMessage ? lastMessage.content : '...'}
+          </div>
+        </Html>
+      )}
+    </group>
+  )
 }

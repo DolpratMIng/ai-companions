@@ -6,13 +6,15 @@ import { Character } from './Character'
 
 export function ARScene() {
   const characters = useStore((s) => s.characters)
+  const setActiveCharacter = useStore((s) => s.setActiveCharacter)
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-10">
+    <div className="absolute inset-0 z-10">
       <Canvas
-        camera={{ position: [0, 1.3, 2.8], fov: 50 }}
+        camera={{ position: [0, 1.5, 3.2], fov: 45 }}
         style={{ background: 'transparent' }}
         gl={{ alpha: true, antialias: true }}
+        onPointerMissed={() => setActiveCharacter(null)}
       >
         <ambientLight intensity={0.7} />
         <directionalLight position={[5, 8, 6]} intensity={1.2} />
@@ -22,10 +24,11 @@ export function ARScene() {
         {characters.map((char, i) => (
           <Character
             key={char.id}
+            charId={char.id}
             modelUrl={char.modelUrl}
             position={[
-              i * 0.9 - (characters.length - 1) * 0.45,
-              0,
+              i * 1.5 - (characters.length - 1) * 0.75,
+              -0.7,
               -1.2,
             ]}
           />
